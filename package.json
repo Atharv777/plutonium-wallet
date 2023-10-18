@@ -1,0 +1,15 @@
+{
+    "name": "plutonium-wallet",
+    "version": "1.0.0",
+    "description": "A trusted, secure and easily accessible Ethereum wallet on Telegram.",
+    "main": "index.js",
+    "scripts": {
+        "start": "npx nodemon ./bot.js"
+    },
+    "author": "Atharv777",
+    "license": "ISC",
+    "dependencies": {
+        "dotenv": "^16.3.1",
+        "telegraf": "^4.14.0",
+    }
+}
