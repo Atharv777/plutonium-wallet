@@ -1,101 +1,107 @@
-const { encryptMnemonic, decryptMnemonic } = require("./secureBundle");
 
-const { ethers } = require("ethers");
-const { SafeFactory, EthersAdapter } = require("@safe-global/protocol-kit");
-import SafeApiKit from "@safe-global/api-kit";
+require('dotenv').config();
+const { encryptMnemonic } = require("./secureBundle")
+const { ethers } = require("ethers")
+const { SafeFactory, EthersAdapter } = require("@safe-global/protocol-kit")
+
 
 async function createNewWallet(pass) {
-	try {
-		// Generate new Mnemonic and Keypair
-		const wallet = ethers.Wallet.createRandom();
+    try {
+        // Generate new Mnemonic and Keypair
+        const wallet = ethers.Wallet.createRandom();
 
-		const address = wallet.address;
-		const mnemonic = wallet.mnemonic.phrase;
-		const derivationPath = wallet.mnemonic.path;
+        const address = wallet.address;
+        const mnemonic = wallet.mnemonic.phrase
+        const derivationPath = wallet.mnemonic.path
 
-		// Encrypting the seed phrase and derivatin path
-		const encryptedMnemonic = await encryptMnemonic(
-			mnemonic,
-			derivationPath,
-			pass.toString()
-		);
+        // Encrypting the seed phrase and derivatin path
+        const encryptedMnemonic = await encryptMnemonic(mnemonic, derivationPath, pass.toString())
 
-		console.log(address, JSON.stringify(encryptedMnemonic));
+        // Deploying Safe
+        const safeResp = await deploySafeWrapper(wallet)
 
-		return {
-			status: 200,
-			data: { address, encryptedMnemonic },
-			msg: "Successfully created the account!",
-		};
-	} catch (err) {
-		console.log(err);
-		return { status: 400, data: err, msg: "Unknown error occurred!" };
-	}
+        if (safeResp.status === 200) {
+            return ({ status: 200, data: { address, encryptedMnemonic, safeAddress: safeResp.data }, msg: "Successfully created the account!" })
+        }
+        else {
+            return (safeResp);
+        }
+    }
+    catch (err) {
+        console.log(err);
+        return { status: 400, data: err, msg: "Unknown error occurred!" }
+    }
 }
 
-async function createSafe() {
-	try {
-		const provider = new ethers.providers.JsonRpcProvider(
-			process.env.REACT_APP_INFURA_GOERLI_KEY
-		);
+async function deploySafeWrapper(wallet) {
+    try {
+        const provider = new ethers.providers.JsonRpcProvider(process.env.GOERLI_RPC);
 
-		const safeOwner = new ethers.Wallet(wallet.privateKey, provider);
-		const gasData = await provider.getFeeData();
+        const safeOwner = new ethers.Wallet(wallet.privateKey, provider);
+        const gasData = await provider.getFeeData();
 
-		let gasDetails = {
-			gasPrice: ethers.BigNumber.from(gasData.gasPrice),
-			maxFeePerGas: ethers.BigNumber.from(gasData.maxFeePerGas),
-			maxPriorityFeePerGas: ethers.BigNumber.from(gasData.maxPriorityFeePerGas),
-		};
+        const gasDetails = {
+            gasPrice: ethers.BigNumber.from(gasData.gasPrice),
+            maxFeePerGas: ethers.BigNumber.from(gasData.maxFeePerGas),
+            maxPriorityFeePerGas: ethers.BigNumber.from(gasData.maxPriorityFeePerGas)
+        };
+        const options = {
+            gasPrice: gasDetails.gasPrice._hex,
+            gasLimit: 300000,
+        };
 
-		const options = {
-			gasPrice: gasDetails.gasPrice._hex,
-			gasLimit: 300000,
-		};
+        const ethAdapter = new EthersAdapter({
+            ethers,
+            signerOrProvider: safeOwner,
+        });
 
-		const ethAdapter = new EthersAdapter({
-			ethers,
-			signerOrProvider: safeOwner,
-		});
+        const safeFactory = await SafeFactory.create({
+            ethAdapter: ethAdapter,
+        });
+        const safeAccountConfig = {
+            owners: [await safeOwner.getAddress()],
+            threshold: 1,
+        };
 
-		const txServiceUrl = "https://safe-transaction-goerli.safe.global";
-		const safeService = new SafeApiKit({
-			txServiceUrl,
-			ethAdapter: ethAdapter,
-		});
+        // Transferring some goerli from Bot owner to safe owner
+        try {
+            const privateKey = process.env.PRIVATE_KEY;
+            const BotOwner = new ethers.Wallet(privateKey, provider);
+            // Convert amount to wei
+            const amountInWei = ethers.utils.parseEther("0.0005");
+            // Create transaction
+            const transaction = await BotOwner.sendTransaction({
+                to: wallet.address,
+                value: amountInWei,
+            });
+            // Wait for the transaction to be mined
+            const receipt = await transaction.wait();
+            console.log(receipt.transactionHash);
+        }
+        catch (error) {
+            console.error("Error transferring funds:", error.message);
+            return ({ status: 200, data: error, msg: "Error transferring tokens!" })
+        }
 
-		const safeFactory = await SafeFactory.create({
-			ethAdapter: ethAdapter,
-		});
 
-		const safeAccountConfig = {
-			owners: [await safeOwner.getAddress()],
-			threshold: 1,
+        // Deploy final Safe contract
+        try {
+            const safeSdkOwner = await safeFactory.deploySafe({
+                safeAccountConfig,
+                options: options,
+            });
+            const safeAddress = await safeSdkOwner.getAddress();
+            return ({ status: 200, data: safeAddress, msg: "Successfully created account!" })
+        }
+        catch (e) {
+            console.log(e)
+            return ({ status: 400, data: e, msg: "Error while deploying Safe!" })
+        }
 
-			// ... (Optional params)
-		};
-
-		const transferFund = await transferFundsToNewAccount(
-			wallet.address,
-			"0.0005"
-		);
-
-		const safeSdkOwner1 = await safeFactory.deploySafe({
-			safeAccountConfig,
-			options: options,
-		});
-
-		const tempSafeAddress = await safeSdkOwner1.getAddress();
-		console.log("Safe SDK Owner : ", safeSdkOwner1);
-		setSafeAddress(tempSafeAddress);
-		console.log("Safe Address : ", tempSafeAddress);
-		console.log("Your Safe has been deployed:");
-		console.log(`https://goerli.etherscan.io/address/${tempSafeAddress}`);
-		console.log(`https://app.safe.global/gor:${tempSafeAddress}`);
-	} catch (err) {
-		console.error(err.message || err);
-	}
+    } catch (err) {
+        console.error(err);
+        return ({ status: 400, data: err, msg: "Unknown error occurred!" })
+    }
 }
 
-module.exports = { createNewWallet };
-module.exports = { createSafe };
+module.exports = { createNewWallet }
