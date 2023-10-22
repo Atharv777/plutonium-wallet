@@ -5,10 +5,11 @@ const { default: SafeApiKit } = require("@safe-global/api-kit");
 const { getUserDetails, addUserDetails } = require("./utils/firebase")
 const { decryptMnemonic } = require("./utils/secureBundle")
 const { createNewWallet } = require("./utils/createNewWallet")
-const { getBalance } = require("./utils/getBalance")
 const { getAllTokens } = require('./utils/getAllTokens');
-const { getAllTxns } = require("./utils/getAllTxns")
+const { getAllTxns } = require('./utils/getAllTxns');
+const { getBalance } = require('./utils/getBalance');
 const { replyMessages } = require("./utils/replyMessages");
+const { deployContract } = require('./utils/deployContract');
 
 
 const PriceWizard = new Scenes.WizardScene(
@@ -33,6 +34,103 @@ const PriceWizard = new Scenes.WizardScene(
         return ctx.scene.leave();
     }
 );
+
+const DeployWizard = new Scenes.WizardScene(
+    'DeployWizard',
+    ctx => {
+        ctx.reply("Send me a Solidity file (.sol)");
+        ctx.wizard.state = {};
+
+        return ctx.wizard.next();
+    },
+    async ctx => {
+
+        if (ctx.message.document && ctx.message.document.file_name.endsWith(".sol")) {
+
+            const fileUrl = await ctx.telegram.getFileLink(ctx.message.document.file_id);
+            const response = await fetch(fileUrl);
+
+            if (response.ok) {
+                const fileText = await response.text();
+                if (ctx.message.document.file_name.includes(" ")) {
+                    ctx.reply("The file name has whitespaces which is not supported.")
+                    ctx.wizard.back()
+                    return ctx.wizard.steps[ctx.wizard.cursor](ctx)
+                }
+                else {
+                    ctx.wizard.state.fileName = ctx.message.document.file_name;
+                    ctx.wizard.state.fileText = fileText;
+                    ctx.reply('Enter space separated constructor arguments. If there are no constructor arguments, just send me "null"');
+                    return ctx.wizard.next();
+                }
+            }
+            else {
+                ctx.reply("An error occurred while fetching the file, Plesse try again.")
+                ctx.wizard.back()
+                return ctx.wizard.steps[ctx.wizard.cursor](ctx)
+            }
+        }
+        else {
+            ctx.reply("Please send me only document with file extension .sol")
+            ctx.wizard.back()
+            return ctx.wizard.steps[ctx.wizard.cursor](ctx)
+        }
+    },
+    ctx => {
+        if (ctx.message.text) {
+            if (ctx.message.text === "null") {
+                ctx.wizard.state.args = null;
+            }
+            else {
+                args = ctx.message.text.split(" ");
+                ctx.wizard.state.args = args;
+            }
+            ctx.reply('Lastly, Enter your wallet password');
+            return ctx.wizard.next();
+        }
+        else {
+            ctx.reply("Invalid reply!")
+            ctx.wizard.back()
+            return ctx.wizard.steps[ctx.wizard.cursor](ctx)
+        }
+    },
+    async ctx => {
+        try {
+            ctx.wizard.state.pass = ctx.message.text;
+
+            const delMsg = await ctx.reply("Deploying the contract...")
+
+            const contract = await deployContract(
+                ctx.message.from.id.toString(),
+                ctx.message.text,
+                ctx.wizard.state.fileName,
+                ctx.wizard.state.fileText,
+                ctx.wizard.state.args
+            )
+
+            if (contract.status === 200) {
+                ctx.replyWithMarkdownV2(`
+Contract deployment successfull\\!
+Contract address: *${contract.data.contractAddress}*
+Total deployment Cost: ${contract.data.gasFeePaid.replaceAll(".", "\\.")} ETH`,
+                    { reply_markup: { inline_keyboard: [[{ text: "View transaction on explorer", url: `https://goerli.etherscan.io/tx/${contract.data.transactionHash}` }]] } })
+                ctx.deleteMessage(delMsg.message_id)
+            }
+            else {
+                console.log(contract.data)
+                ctx.reply(contract.msg)
+                ctx.deleteMessage(delMsg.message_id)
+                return ctx.scene.leave();
+            }
+        }
+        catch (e) {
+            console.log(e)
+            ctx.reply("An Unknown error occurred! Don't worry, no gas fees was deducted from your account. Please try again later.")
+            return ctx.scene.leave();
+        }
+    }
+);
+
 
 
 const stage = new Scenes.Stage([PriceWizard, DeployWizard]);
@@ -173,6 +271,50 @@ bot.command('view_seed_phrase', async ctx => {
 
 });
 
+// View All Tokens command
+bot.command('all_tokens', async ctx => {
+    const replyData = await ctx.reply(`Fetching all token details...`);
+    const userD = await getUserDetails(ctx.message.from.id.toString())
+
+    try {
+        if (userD.status === 200) {
+            // Wallet exists
+            const arr = ctx.message.text.split(" ")
+            if (arr.length === 2) {
+                const allTokensResp = await getAllTokens(ctx.message.from.id.toString(), arr[1]);
+
+                if (allTokensResp.status === 200) {
+
+                    const replyMarkupTiles = Object.keys(allTokensResp.data).map((key) => ([{ text: `${allTokensResp.data[key].balance} ${allTokensResp.data[key].symbol} (${allTokensResp.data[key].name})`, url: `https://goerli.etherscan.io/token/${allTokensResp.data[key].address}` }]))
+
+                    ctx.reply("All tokens owned by you are listed below:", { reply_markup: { inline_keyboard: replyMarkupTiles } })
+                    ctx.deleteMessage(replyData.message_id)
+
+                }
+                else {
+                    ctx.reply(allTokensResp.msg)
+                    ctx.deleteMessage(replyData.message_id)
+                }
+            }
+            else {
+                // Invalid command given (No password provided)
+                ctx.replyWithMarkdownV2(replyMessages['VIEW_ALL_TOKENS_INVALID_CMD']())
+                ctx.deleteMessage(replyData.message_id)
+            }
+        }
+        else {
+            // No wallet found
+            ctx.replyWithMarkdownV2(replyMessages['NO_WALLET_FOUND']())
+            ctx.deleteMessage(replyData.message_id)
+        }
+    }
+    catch (err) {
+        console.log(err)
+        ctx.reply(`An unknown error occurred!`);
+        ctx.deleteMessage(replyData.message_id)
+    }
+});
+
 // Get Balance
 bot.command('balance', async ctx => {
     const replyData = await ctx.reply(`Fetching balance details...`);
@@ -213,36 +355,16 @@ bot.command('balance', async ctx => {
     }
 });
 
-// View All Tokens command
-bot.command('all_tokens', async ctx => {
-    const replyData = await ctx.reply(`Fetching all token details...`);
+// Show QR command
+bot.command('show_qr', async ctx => {
+    const replyData = await ctx.reply(`Fetching account details...`);
     const userD = await getUserDetails(ctx.message.from.id.toString())
 
     try {
         if (userD.status === 200) {
             // Wallet exists
-            const arr = ctx.message.text.split(" ")
-            if (arr.length === 2) {
-                const allTokensResp = await getAllTokens(ctx.message.from.id.toString(), arr[1]);
-
-                if (allTokensResp.status === 200) {
-
-                    const replyMarkupTiles = Object.keys(allTokensResp.data).map((key) => ([{ text: `${allTokensResp.data[key].balance} ${allTokensResp.data[key].symbol} (${allTokensResp.data[key].name})`, url: `https://goerli.etherscan.io/token/${allTokensResp.data[key].address}` }]))
-
-                    ctx.reply("All tokens owned by you are listed below:", { reply_markup: { inline_keyboard: replyMarkupTiles } })
-                    ctx.deleteMessage(replyData.message_id)
-
-                }
-                else {
-                    ctx.reply(allTokensResp.msg)
-                    ctx.deleteMessage(replyData.message_id)
-                }
-            }
-            else {
-                // Invalid command given (No password provided)
-                ctx.replyWithMarkdownV2(replyMessages['VIEW_ALL_TOKENS_INVALID_CMD']())
-                ctx.deleteMessage(replyData.message_id)
-            }
+            ctx.replyWithPhoto({ url: "https://quickchart.io/qr?text=0x68a146f881Ec7310b644A3Fe2B6da6fc82F22A9E&margin=2&size=300" }, { caption: "Scan this QR with any dApp that supports WalletConnect, to seamlessly connect your wallet with it." })
+            ctx.deleteMessage(replyData.message_id)
         }
         else {
             // No wallet found
@@ -322,28 +444,51 @@ ${transfers}
     }
 });
 
-// Show QR command
-bot.command('show_qr', async ctx => {
-    const replyData = await ctx.reply(`Fetching account details...`);
-    const userD = await getUserDetails(ctx.message.from.id.toString())
+
+// On Ramp
+bot.command('onramp', async ctx => {
 
     try {
+        const userD = await getUserDetails(ctx.message.from.id.toString())
         if (userD.status === 200) {
             // Wallet exists
-            ctx.replyWithPhoto({ url: `https://quickchart.io/qr?text=${userD.data.safeAddresses[userD.data.currentIndex]}&margin=2&size=300"` }, { caption: "Scan this QR with any wallet to receive tokens in your wallet." })
-            ctx.deleteMessage(replyData.message_id)
+            ctx.reply("Please click on the button below", {
+                reply_markup: {
+                    inline_keyboard: [[{ text: "Open Stripe Widget", web_app: { url: "https://crypto.link.com/?ref=lb&destination_amount=5&destination_currency=eth&destination_network=ethereum" } }]]
+                }
+            })
         }
         else {
             // No wallet found
             ctx.replyWithMarkdownV2(replyMessages['NO_WALLET_FOUND']())
-            ctx.deleteMessage(replyData.message_id)
         }
     }
     catch (err) {
         console.log(err)
         ctx.reply(`An unknown error occurred!`);
-        ctx.deleteMessage(replyData.message_id)
     }
 });
+
+
+// Deploy Contract
+bot.command('deploy', async ctx => {
+
+    try {
+        const userD = await getUserDetails(ctx.message.from.id.toString())
+        if (userD.status === 200) {
+            // Wallet exists
+            ctx.scene.enter('DeployWizard');
+        }
+        else {
+            // No wallet found
+            ctx.replyWithMarkdownV2(replyMessages['NO_WALLET_FOUND']())
+        }
+    }
+    catch (err) {
+        console.log(err)
+        ctx.reply(`An unknown error occurred!`);
+    }
+});
+
 
 bot.launch();
