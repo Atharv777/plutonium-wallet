@@ -10,6 +10,7 @@ const { getAllTxns } = require('./utils/getAllTxns');
 const { getBalance } = require('./utils/getBalance');
 const { replyMessages } = require("./utils/replyMessages");
 const { deployContract } = require('./utils/deployContract');
+const { gaslessTransaction } = require('./utils/gaslessTransaction');
 
 
 const PriceWizard = new Scenes.WizardScene(
@@ -133,7 +134,123 @@ Total deployment Cost: ${contract.data.gasFeePaid.replaceAll(".", "\\.")} ETH`,
 
 
 
-const stage = new Scenes.Stage([PriceWizard, DeployWizard]);
+const TransferWizard = new Scenes.WizardScene(
+    'TransferWizard',
+    ctx => {
+        ctx.reply("Enter Amount (in ETH)");
+        ctx.wizard.state = {};
+
+        return ctx.wizard.next();
+    },
+    async ctx => {
+        try {
+            if (ctx.message.text) {
+                const amount = parseFloat(ctx.message.text)
+                ctx.wizard.state.amount = amount;
+                ctx.reply('Either mention a telegram user or enter a wallet address');
+                return ctx.wizard.next();
+            }
+            else {
+                ctx.reply("Please send me an Integer or Float values only")
+                ctx.wizard.back()
+                return ctx.wizard.steps[ctx.wizard.cursor](ctx)
+            }
+        }
+        catch (e) {
+            ctx.reply("An Error occurred, Please try again later.")
+            return ctx.scene.leave();
+        }
+    },
+    async ctx => {
+        try {
+            if (ctx.message.text) {
+                if (ctx.message.text.startsWith("@")) {
+
+                    const userName = ctx.message.text.replace("@", "");
+
+                    const userD = await getUserDetails(userName)
+
+                    if (userD.status === 200) {
+                        address = userD.data.safeAddresses[userD.data.currentIndex]
+                        ctx.wizard.state.address = address;
+                        ctx.reply('Lastly, Enter your wallet password');
+                        return ctx.wizard.next();
+                    }
+                    else {
+                        ctx.reply("Mentioned user doesn't have a wallet registered with plutonium wallet.")
+                        return ctx.scene.leave();
+                    }
+                }
+                else if (ctx.message.text.startsWith("0x")) {
+                    address = ctx.message.text
+                    ctx.wizard.state.address = address;
+                    ctx.reply('Lastly, Enter your wallet password');
+                    return ctx.wizard.next();
+                }
+                else {
+                    ctx.reply("Invalid reply!")
+                    return ctx.wizard.leave();
+                }
+            }
+            else {
+                ctx.reply("Invalid reply!")
+                return ctx.wizard.leave();
+            }
+        }
+        catch (e) {
+            console.log(e)
+            ctx.reply("An Unknown error occurred! Don't worry, no gas fees was deducted from your account. Please try again later.")
+            return ctx.scene.leave();
+        }
+    },
+    async ctx => {
+        try {
+            ctx.wizard.state.pass = ctx.message.text;
+
+            console.log(ctx.wizard.state.amount)
+            console.log(ctx.wizard.state.address)
+            console.log(ctx.wizard.state.pass)
+
+            const delMsg = await ctx.reply("Sending tokens...")
+
+            const resp = await gaslessTransaction(
+                ctx.message.from.username.toString().toLowerCase(),
+                ctx.wizard.state.pass,
+                ctx.wizard.state.address,
+                ctx.wizard.state.amount.toString()
+            )
+
+            if (resp.status === 200) {
+                console.log(resp)
+
+                setTimeout(async () => {
+                    const relayResp = await fetch(`https://relay.gelato.digital/tasks/status/${resp.data.taskId}`)
+                    const jsonRelayResp = await relayResp.json();
+                    ctx.replyWithMarkdownV2(`
+${ctx.wizard.state.amount.toString().replaceAll(".", "\\.")} ether successfully sent to ${ctx.wizard.state.address}\\!
+This transaction was a gassless transaction\\, *no gas fees was deducted*\\.`,
+                        { reply_markup: { inline_keyboard: [[{ text: "View transaction on explorer", url: `https://goerli.etherscan.io/tx/${jsonRelayResp.task.transactionHash}` }]] } });
+                    ctx.deleteMessage(delMsg.message_id)
+                }, 5000);
+            }
+            else {
+                console.log(resp.data)
+                ctx.reply(resp.msg)
+                ctx.deleteMessage(delMsg.message_id)
+                return ctx.scene.leave();
+            }
+        }
+        catch (e) {
+            console.log(e)
+            ctx.reply("An Unknown error occurred! Don't worry, no gas fees was deducted from your account. Please try again later.")
+            return ctx.scene.leave();
+        }
+    }
+);
+
+
+
+const stage = new Scenes.Stage([PriceWizard, DeployWizard, TransferWizard]);
 
 const bot = new Telegraf(process.env.BOT_API_TOKEN);
 bot.use(session());
@@ -486,31 +603,14 @@ bot.command('deploy', async ctx => {
 
 
 // Transfer tokens
-bot.command('deploy', async ctx => {
+bot.command('transfer', async ctx => {
 
     try {
         const userD = await getUserDetails(ctx.message.from.username.toString())
         if (userD.status === 200) {
             // Wallet exists
 
-            const arr = ctx.message.text.split(" ")
-            if (arr.length === 2) {
-                const balResp = await getBalance(ctx.message.from.username.toString(), arr[1]);
-
-                if (balResp.status === 200) {
-                    ctx.reply(balResp.data)
-                    ctx.deleteMessage(replyData.message_id)
-                }
-                else {
-                    ctx.reply(balResp.msg)
-                    ctx.deleteMessage(replyData.message_id)
-                }
-            }
-            else {
-                // Invalid command given (No password provided)
-                ctx.replyWithMarkdownV2(replyMessages['VIEW_BALANCE_INVALID_CMD']())
-                ctx.deleteMessage(replyData.message_id)
-            }
+            ctx.scene.enter('TransferWizard');
 
         }
         else {
@@ -523,5 +623,6 @@ bot.command('deploy', async ctx => {
         ctx.reply(`An unknown error occurred!`);
     }
 });
+
 
 bot.launch();

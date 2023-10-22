@@ -18,8 +18,6 @@ const getUserDetails = async (id) => {
     const docRef = doc(db, "wallets", id.toLowerCase());
     const docSnap = await getDoc(docRef);
 
-    console.log(docSnap.data())
-
     if (docSnap.exists()) {
         return ({ status: 200, data: docSnap.data(), msg: "User Data fetched successfully!" })
     } else {
