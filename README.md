@@ -24,6 +24,7 @@ Existing cryptocurrency wallets often lack user-friendly interfaces and comprehe
 # 🧠 Knowledge Primer
 
 - [Safe](https://safe.global/) is the account abstraction leader on Ethereum and the EVM with the most secure smart wallet infrastructure and platform
+- [Scroll](https://scroll.io/) is designed by and for Ethereum developers. A swift, reliable and scalable Layer 2 blockchain, Scroll extends Ethereum's capabilities, enabling apps to scale without any surprises. 
 
 # Features
 - Telegram Bot Integration:
@@ -39,10 +40,10 @@ Group multiple transactions into a single bundle for improved efficiency and cos
 Seamless onboarding of new users into the cryptocurrency space using Safe's Onramp Kit.
 
 - Fund Transfer:
-Transfer funds effortlessly to a single recipient or multiple recipients simultaneously.
+Transfer funds effortlessly to a single recipient or multiple recipients simultaneously without paying any gas fees.
 
 - Smart Contract Deployment:
-Deploy smart contracts directly through the the bot interface using Solc.
+Deploy smart contracts directly through the the bot interface.
 
 - Multi-Account Management:
 Create and manage multiple accounts within the wallet for enhanced flexibility.
