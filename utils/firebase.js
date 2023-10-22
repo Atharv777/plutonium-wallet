@@ -1,6 +1,6 @@
 require('dotenv').config();
 const { initializeApp } = require("firebase/app");
-const { getFirestore, doc, getDoc } = require("firebase/firestore");
+const { getFirestore, doc, getDoc, setDoc } = require("firebase/firestore");
 
 const firebaseConfig = {
     apiKey: process.env.FIREBASE_APIKEY,
@@ -25,5 +25,17 @@ const getUserDetails = async (id) => {
     }
 }
 
+const addUserDetails = async (id, data) => {
+    try {
+        const docRef = doc(db, "wallets", id);
+        await setDoc(docRef, data);
+        return ({ status: 200, data: null, msg: "User Data stored successfully!" })
+    }
+    catch (e) {
+        return ({ status: 400, data: e, msg: "Error storing user data! Please try again." })
+    }
+}
 
-module.exports = { getUserDetails }
+// addUserDetails("1234", { data: "athav" })
+
+module.exports = { getUserDetails, addUserDetails }
