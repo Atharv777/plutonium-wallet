@@ -63,14 +63,25 @@ Scan QR codes for quick payments, similar to traditional UPI apps.
 
 # ⏭️ What's next
 
-- Extending this system to more sophististicated systems.
-- Features like Superchat to increase the token flow on Sui Network.
+- Grant Applications:
+Apply for grants to enhance research, development, and overall wallet improvements.
+
+- Multichain Integration:
+Expand compatibility to multiple blockchain networks for diverse assets and DApps.
+
+- Wallet Recovery Feature:
+Introduce a robust wallet recovery feature for users transitioning from traditional web2 platforms.
+
+- Mainstream Adoption Strategies:
+Implement educational initiatives to foster cryptocurrency adoption among a broader user base.
+
+- Enhanced Security Measures:
+Invest in continuous security protocols to safeguard user data and assets.
 
 #   Challenges we ran into
 
 - Using Safe was new to us but the docs were of great help
 - It was the first time we were creating a telegram bot so it was pretty challenging.
-
 
 
 # 📜 License
