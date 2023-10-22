@@ -32,7 +32,7 @@ Access and control the wallet through a user-friendly Telegram bot interface.
 - Gasless Transactions:
 Execute transactions without dealing with gas fees, enhancing user convenience.
 
--Bundled Transactions:
+- Bundled Transactions:
 Group multiple transactions into a single bundle for improved efficiency and cost-effectiveness.
 
 - Onramp Transactions:
