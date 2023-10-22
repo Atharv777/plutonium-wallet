@@ -445,31 +445,6 @@ ${transfers}
 });
 
 
-// On Ramp
-bot.command('onramp', async ctx => {
-
-    try {
-        const userD = await getUserDetails(ctx.message.from.id.toString())
-        if (userD.status === 200) {
-            // Wallet exists
-            ctx.reply("Please click on the button below", {
-                reply_markup: {
-                    inline_keyboard: [[{ text: "Open Stripe Widget", web_app: { url: "https://crypto.link.com/?ref=lb&destination_amount=5&destination_currency=eth&destination_network=ethereum" } }]]
-                }
-            })
-        }
-        else {
-            // No wallet found
-            ctx.replyWithMarkdownV2(replyMessages['NO_WALLET_FOUND']())
-        }
-    }
-    catch (err) {
-        console.log(err)
-        ctx.reply(`An unknown error occurred!`);
-    }
-});
-
-
 // Deploy Contract
 bot.command('deploy', async ctx => {
 
