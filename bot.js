@@ -6,6 +6,7 @@ const { getUserDetails, addUserDetails } = require("./utils/firebase")
 const { decryptMnemonic } = require("./utils/secureBundle")
 const { createNewWallet } = require("./utils/createNewWallet")
 const { getBalance } = require("./utils/getBalance")
+const { getAllTokens } = require('./utils/getAllTokens');
 const { getAllTxns } = require("./utils/getAllTxns")
 const { replyMessages } = require("./utils/replyMessages");
 
@@ -196,6 +197,50 @@ bot.command('balance', async ctx => {
             else {
                 // Invalid command given (No password provided)
                 ctx.replyWithMarkdownV2(replyMessages['VIEW_BALANCE_INVALID_CMD']())
+                ctx.deleteMessage(replyData.message_id)
+            }
+        }
+        else {
+            // No wallet found
+            ctx.replyWithMarkdownV2(replyMessages['NO_WALLET_FOUND']())
+            ctx.deleteMessage(replyData.message_id)
+        }
+    }
+    catch (err) {
+        console.log(err)
+        ctx.reply(`An unknown error occurred!`);
+        ctx.deleteMessage(replyData.message_id)
+    }
+});
+
+// View All Tokens command
+bot.command('all_tokens', async ctx => {
+    const replyData = await ctx.reply(`Fetching all token details...`);
+    const userD = await getUserDetails(ctx.message.from.id.toString())
+
+    try {
+        if (userD.status === 200) {
+            // Wallet exists
+            const arr = ctx.message.text.split(" ")
+            if (arr.length === 2) {
+                const allTokensResp = await getAllTokens(ctx.message.from.id.toString(), arr[1]);
+
+                if (allTokensResp.status === 200) {
+
+                    const replyMarkupTiles = Object.keys(allTokensResp.data).map((key) => ([{ text: `${allTokensResp.data[key].balance} ${allTokensResp.data[key].symbol} (${allTokensResp.data[key].name})`, url: `https://goerli.etherscan.io/token/${allTokensResp.data[key].address}` }]))
+
+                    ctx.reply("All tokens owned by you are listed below:", { reply_markup: { inline_keyboard: replyMarkupTiles } })
+                    ctx.deleteMessage(replyData.message_id)
+
+                }
+                else {
+                    ctx.reply(allTokensResp.msg)
+                    ctx.deleteMessage(replyData.message_id)
+                }
+            }
+            else {
+                // Invalid command given (No password provided)
+                ctx.replyWithMarkdownV2(replyMessages['VIEW_ALL_TOKENS_INVALID_CMD']())
                 ctx.deleteMessage(replyData.message_id)
             }
         }
