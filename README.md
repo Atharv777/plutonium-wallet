@@ -17,7 +17,7 @@ Existing cryptocurrency wallets often lack user-friendly interfaces and comprehe
 - Enable fund transfers to single or multiple recipients with ease.
 - Support the deployment of smart contracts directly through the wallet interface.
 - Allow users to manage multiple accounts effortlessly.
-- Integrate QR code scanning for quick payments, akin to traditional UPI apps.
+- Integrate QR code scanning for quick payments in crypto, akin to traditional UPI apps thus making cryptocurrencies mainstream.
 - Offer an intuitive interface, making it the first choice for both beginners and experienced users.
 - Provide functionalities comparable to traditional web wallets with added convenience.
 
@@ -42,14 +42,13 @@ Seamless onboarding of new users into the cryptocurrency space using Safe's Onra
 Transfer funds effortlessly to a single recipient or multiple recipients simultaneously.
 
 - Smart Contract Deployment:
-Deploy smart contracts directly through the wallet interface using Safe's Protocol Kit.
-
+Deploy smart contracts directly through the the bot interface using Solc.
 
 - Multi-Account Management:
 Create and manage multiple accounts within the wallet for enhanced flexibility.
 
 - QR Code Scanning:
-Scan QR codes for quick payments, similar to traditional UPI apps.
+Scan QR codes for quick payments using crypto, similar to traditional UPI apps.
 
 
 # 💻 Tech Stack
