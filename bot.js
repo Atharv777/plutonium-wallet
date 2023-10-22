@@ -101,7 +101,7 @@ const DeployWizard = new Scenes.WizardScene(
             const delMsg = await ctx.reply("Deploying the contract...")
 
             const contract = await deployContract(
-                ctx.message.from.id.toString(),
+                ctx.message.from.username.toString(),
                 ctx.message.text,
                 ctx.wizard.state.fileName,
                 ctx.wizard.state.fileText,
@@ -140,6 +140,10 @@ bot.use(session());
 bot.use(stage.middleware());
 
 
+// bot.on("text", ctx => {
+//     console.log(ctx.message)
+// })
+
 // Start command
 bot.start(async ctx => {
     ctx.replyWithSticker("CAACAgIAAxkBAANFZS2HXgk5VS9PvQ7Bk2VuowABOKpsAAIFAAPANk8T-WpfmoJrTXUwBA")
@@ -177,7 +181,7 @@ bot.command('gas_info', async ctx => {
 // Create Wallet command
 bot.command('create_wallet', async ctx => {
     try {
-        const userD = await getUserDetails(ctx.message.from.id.toString())
+        const userD = await getUserDetails(ctx.message.from.username.toString())
 
         if (userD.status === 200) {
             // Wallet already found
@@ -195,6 +199,7 @@ bot.command('create_wallet', async ctx => {
                 if (resp.status === 200) {
                     // Wallet created successfully
                     const userId = ctx.message.from.id.toString()
+                    const userName = ctx.message.from.username.toString().toLowerCase()
 
                     const userData = {}
                     userData.addresses = [resp.data.address]
@@ -202,8 +207,9 @@ bot.command('create_wallet', async ctx => {
                     userData.encryptedData = JSON.stringify(resp.data.encryptedMnemonic)
                     userData.safeAddresses = [resp.data.safeAddress]
                     userData.userId = userId
+                    userData.userName = userName
 
-                    const addResp = await addUserDetails(userId, userData)
+                    const addResp = await addUserDetails(userName, userData)
 
                     if (addResp.status === 200) {
                         // Storing data in DB successful
@@ -239,7 +245,8 @@ bot.command('view_seed_phrase', async ctx => {
 
     try {
         if (ctx.message.chat.type === 'private') {
-            const userD = await getUserDetails(ctx.message.from.id.toString())
+            const userD = await getUserDetails(ctx.message.from.username.toString())
+
             if (userD.status === 200) {
                 // Wallet exists
                 const arr = ctx.message.text.split(" ")
@@ -286,14 +293,14 @@ bot.command('view_seed_phrase', async ctx => {
 // View All Tokens command
 bot.command('all_tokens', async ctx => {
     const replyData = await ctx.reply(`Fetching all token details...`);
-    const userD = await getUserDetails(ctx.message.from.id.toString())
+    const userD = await getUserDetails(ctx.message.from.username.toString())
 
     try {
         if (userD.status === 200) {
             // Wallet exists
             const arr = ctx.message.text.split(" ")
             if (arr.length === 2) {
-                const allTokensResp = await getAllTokens(ctx.message.from.id.toString(), arr[1]);
+                const allTokensResp = await getAllTokens(ctx.message.from.username.toString(), arr[1]);
 
                 if (allTokensResp.status === 200) {
 
@@ -330,14 +337,14 @@ bot.command('all_tokens', async ctx => {
 // Get Balance
 bot.command('balance', async ctx => {
     const replyData = await ctx.reply(`Fetching balance details...`);
-    const userD = await getUserDetails(ctx.message.from.id.toString())
+    const userD = await getUserDetails(ctx.message.from.username.toString())
 
     try {
         if (userD.status === 200) {
             // Wallet exists
             const arr = ctx.message.text.split(" ")
             if (arr.length === 2) {
-                const balResp = await getBalance(ctx.message.from.id.toString(), arr[1]);
+                const balResp = await getBalance(ctx.message.from.username.toString(), arr[1]);
 
                 if (balResp.status === 200) {
                     ctx.reply(balResp.data)
@@ -370,7 +377,7 @@ bot.command('balance', async ctx => {
 // Show QR command
 bot.command('show_qr', async ctx => {
     const replyData = await ctx.reply(`Fetching account details...`);
-    const userD = await getUserDetails(ctx.message.from.id.toString())
+    const userD = await getUserDetails(ctx.message.from.username.toString())
 
     try {
         if (userD.status === 200) {
@@ -396,12 +403,12 @@ bot.command('txn_history', async ctx => {
     const replyData = await ctx.reply(`Fetching all transaction details...`);
 
     try {
-        const userD = await getUserDetails(ctx.message.from.id.toString())
+        const userD = await getUserDetails(ctx.message.from.username.toString())
         if (userD.status === 200) {
             // Wallet exists
             const arr = ctx.message.text.split(" ")
             if (arr.length === 2) {
-                const allTxnsResp = await getAllTxns(ctx.message.from.id.toString(), arr[1]);
+                const allTxnsResp = await getAllTxns(ctx.message.from.username.toString(), arr[1]);
 
                 if (allTxnsResp.status === 200) {
 
@@ -461,7 +468,7 @@ ${transfers}
 bot.command('deploy', async ctx => {
 
     try {
-        const userD = await getUserDetails(ctx.message.from.id.toString())
+        const userD = await getUserDetails(ctx.message.from.username.toString())
         if (userD.status === 200) {
             // Wallet exists
             ctx.scene.enter('DeployWizard');
@@ -482,13 +489,13 @@ bot.command('deploy', async ctx => {
 bot.command('deploy', async ctx => {
 
     try {
-        const userD = await getUserDetails(ctx.message.from.id.toString())
+        const userD = await getUserDetails(ctx.message.from.username.toString())
         if (userD.status === 200) {
             // Wallet exists
 
             const arr = ctx.message.text.split(" ")
             if (arr.length === 2) {
-                const balResp = await getBalance(ctx.message.from.id.toString(), arr[1]);
+                const balResp = await getBalance(ctx.message.from.username.toString(), arr[1]);
 
                 if (balResp.status === 200) {
                     ctx.reply(balResp.data)

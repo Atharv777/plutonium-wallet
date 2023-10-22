@@ -15,8 +15,10 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
 const getUserDetails = async (id) => {
-    const docRef = doc(db, "wallets", id);
+    const docRef = doc(db, "wallets", id.toLowerCase());
     const docSnap = await getDoc(docRef);
+
+    console.log(docSnap.data())
 
     if (docSnap.exists()) {
         return ({ status: 200, data: docSnap.data(), msg: "User Data fetched successfully!" })
@@ -27,7 +29,7 @@ const getUserDetails = async (id) => {
 
 const addUserDetails = async (id, data) => {
     try {
-        const docRef = doc(db, "wallets", id);
+        const docRef = doc(db, "wallets", id.toLowerCase());
         await setDoc(docRef, data);
         return ({ status: 200, data: null, msg: "User Data stored successfully!" })
     }
@@ -35,7 +37,5 @@ const addUserDetails = async (id, data) => {
         return ({ status: 400, data: e, msg: "Error storing user data! Please try again." })
     }
 }
-
-// addUserDetails("1234", { data: "athav" })
 
 module.exports = { getUserDetails, addUserDetails }
