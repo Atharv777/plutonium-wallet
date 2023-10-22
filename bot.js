@@ -176,97 +176,109 @@ bot.command('gas_info', async ctx => {
 
 // Create Wallet command
 bot.command('create_wallet', async ctx => {
+    try {
+        const userD = await getUserDetails(ctx.message.from.id.toString())
 
-    const userD = await getUserDetails(ctx.message.from.id.toString())
-
-    if (userD.status === 200) {
-        // Wallet already found
-        ctx.replyWithMarkdownV2(replyMessages['CREATE_WALLET_ALREADY_FOUND'](userD.data.addresses[0].slice(0, 6) + '\\.\\.\\.' + userD.data.addresses[0].slice(-4)))
-    }
-    else {
-        // Wallet not found
-        const replyData = await ctx.reply(`Creating wallet...`);
-
-        const arr = ctx.message.text.split(" ")
-
-        if (arr.length === 2) {
-            const resp = await createNewWallet(arr[1]);
-
-            if (resp.status === 200) {
-                // Wallet created successfully
-
-
-                // const userId = ctx.message.from.id.toString()
-                // const userData = {}
-
-                // const addResp = await addUserDetails(userId, userData)
-
-                // if (addResp.status === 200) {
-                //     // Storing data in DB successful
-                //     ctx.replyWithMarkdownV2(replyMessages['CREATE_WALLET_SUCCESS'](resp.data.address))
-                //     ctx.deleteMessage(replyData.message_id)
-                // }
-                // else {
-                //     // Storing data in DB failed
-                //     ctx.replyWithMarkdownV2(addResp.msg)
-                //     ctx.deleteMessage(replyData.message_id)
-                // }
-
-
-                ctx.replyWithMarkdownV2(replyMessages['CREATE_WALLET_SUCCESS'](resp.data.address))
-            }
-            else {
-                // Wallet creation failed
-                ctx.replyWithMarkdownV2(resp.msg)
-                ctx.deleteMessage(replyData.message_id)
-            }
+        if (userD.status === 200) {
+            // Wallet already found
+            ctx.replyWithMarkdownV2(replyMessages['CREATE_WALLET_ALREADY_FOUND'](userD.data.addresses[0].slice(0, 6) + '\\.\\.\\.' + userD.data.addresses[0].slice(-4)))
         }
         else {
-            // Invalid commmand (password not provided)
-            ctx.replyWithMarkdownV2(replyMessages['CREATE_WALLET_INVALID_CMD']())
+            // Wallet not found
+            const replyData = await ctx.reply(`Creating wallet...`);
+
+            const arr = ctx.message.text.split(" ")
+
+            if (arr.length === 2) {
+                const resp = await createNewWallet(arr[1]);
+
+                if (resp.status === 200) {
+                    // Wallet created successfully
+                    const userId = ctx.message.from.id.toString()
+
+                    const userData = {}
+                    userData.addresses = [resp.data.address]
+                    userData.currentIndex = 0
+                    userData.encryptedData = resp.data.encryptedMnemonic
+                    userData.safeAddresses = [resp.data.safeAddress]
+                    userData.userId = userId
+
+                    const addResp = await addUserDetails(userId, userData)
+
+                    if (addResp.status === 200) {
+                        // Storing data in DB successful
+                        ctx.replyWithMarkdownV2(replyMessages['CREATE_WALLET_SUCCESS'](resp.data.address))
+                        ctx.deleteMessage(replyData.message_id)
+                    }
+                    else {
+                        // Storing data in DB failed
+                        ctx.replyWithMarkdownV2(addResp.msg)
+                        ctx.deleteMessage(replyData.message_id)
+                    }
+                }
+                else {
+                    // Wallet creation failed
+                    ctx.replyWithMarkdownV2(resp.msg)
+                    ctx.deleteMessage(replyData.message_id)
+                }
+            }
+            else {
+                // Invalid commmand (password not provided)
+                ctx.replyWithMarkdownV2(replyMessages['CREATE_WALLET_INVALID_CMD']())
+            }
         }
+    }
+    catch (err) {
+        console.log(err)
+        ctx.reply(`An unknown error occurred!`);
     }
 });
 
 // View Secret Recovery Phrase command
 bot.command('view_seed_phrase', async ctx => {
 
-    if (ctx.message.chat.type === 'private') {
-        const userD = await getUserDetails(ctx.message.from.id.toString())
-        if (userD.status === 200) {
-            // Wallet exists
-            const arr = ctx.message.text.split(" ")
-            if (arr.length === 2) {
-                // Password provided
-                const decrypted = await decryptMnemonic(arr[1], JSON.parse(userD.data.encryptedData))
-                if (decrypted.status === 200) {
-                    // Show hidden Seed Phrase which will get deleted in 5 sec
-                    const msgToDelete = await ctx.replyWithMarkdownV2(replyMessages['VIEW_SEED_SUCCESS'](decrypted.data.mnemonic))
+    try {
+        if (ctx.message.chat.type === 'private') {
+            const userD = await getUserDetails(ctx.message.from.id.toString())
+            if (userD.status === 200) {
+                // Wallet exists
+                const arr = ctx.message.text.split(" ")
+                if (arr.length === 2) {
+                    // Password provided
+                    const decrypted = await decryptMnemonic(arr[1], JSON.parse(userD.data.encryptedData))
+                    if (decrypted.status === 200) {
+                        // Show hidden Seed Phrase which will get deleted in 5 sec
+                        const msgToDelete = await ctx.replyWithMarkdownV2(replyMessages['VIEW_SEED_SUCCESS'](decrypted.data.mnemonic))
 
-                    // Delete msg in 5 seconds
-                    setTimeout(() => {
-                        ctx.deleteMessage(msgToDelete.message_id)
-                        ctx.replyWithMarkdownV2("*The previous message was deleted for security purpose\\.*")
-                    }, 5000);
+                        // Delete msg in 5 seconds
+                        setTimeout(() => {
+                            ctx.deleteMessage(msgToDelete.message_id)
+                            ctx.replyWithMarkdownV2("*The previous message was deleted for security purpose\\.*")
+                        }, 5000);
+                    }
+                    else {
+                        // Show error message
+                        ctx.reply(decrypted.msg)
+                    }
                 }
                 else {
-                    // Show error message
-                    ctx.reply(decrypted.msg)
+                    // Invalid command given (No password provided)
+                    ctx.replyWithMarkdownV2(replyMessages['VIEW_SEED_INVALID_CMD']())
                 }
             }
             else {
-                // Invalid command given (No password provided)
-                ctx.replyWithMarkdownV2(replyMessages['VIEW_SEED_INVALID_CMD']())
+                // No wallet found
+                ctx.replyWithMarkdownV2(replyMessages['NO_WALLET_FOUND']())
             }
         }
         else {
-            // No wallet found
-            ctx.replyWithMarkdownV2(replyMessages['NO_WALLET_FOUND']())
+            // Message not in private
+            ctx.reply("This command is only available in Private Chats for security purposes.")
         }
     }
-    else {
-        // Message not in private
-        ctx.reply("This command is only available in Private Chats for security purposes.")
+    catch (err) {
+        console.log(err)
+        ctx.reply(`An unknown error occurred!`);
     }
 
 });
@@ -465,5 +477,44 @@ bot.command('deploy', async ctx => {
     }
 });
 
+
+// Transfer tokens
+bot.command('deploy', async ctx => {
+
+    try {
+        const userD = await getUserDetails(ctx.message.from.id.toString())
+        if (userD.status === 200) {
+            // Wallet exists
+
+            const arr = ctx.message.text.split(" ")
+            if (arr.length === 2) {
+                const balResp = await getBalance(ctx.message.from.id.toString(), arr[1]);
+
+                if (balResp.status === 200) {
+                    ctx.reply(balResp.data)
+                    ctx.deleteMessage(replyData.message_id)
+                }
+                else {
+                    ctx.reply(balResp.msg)
+                    ctx.deleteMessage(replyData.message_id)
+                }
+            }
+            else {
+                // Invalid command given (No password provided)
+                ctx.replyWithMarkdownV2(replyMessages['VIEW_BALANCE_INVALID_CMD']())
+                ctx.deleteMessage(replyData.message_id)
+            }
+
+        }
+        else {
+            // No wallet found
+            ctx.replyWithMarkdownV2(replyMessages['NO_WALLET_FOUND']())
+        }
+    }
+    catch (err) {
+        console.log(err)
+        ctx.reply(`An unknown error occurred!`);
+    }
+});
 
 bot.launch();
