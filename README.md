@@ -1,7 +1,7 @@
 # ☢️ Plutonium Wallet
 
 <br>
-Welcome to Plutonium Wallet, first Account Abstraction based Telegram wallet. Easily create wallets and do gasless transactions, bundled transactions, onramp, fund transfers, smart contract deployment, multi-account management. Scan QR codes for payments in crypto like just like UPI apps, making crypto mainstream.
+Welcome to Plutonium Wallet, the pioneering Telegram wallet built on Account Abstraction technology. Seamlessly create wallets and execute gasless transactions, bundled transactions, onramp services, fund transfers, smart contract deployment, and multi-account management. Utilize the convenience of scanning QR codes for cryptocurrency payments, akin to popular UPI apps, to contribute to the mainstream adoption of crypto.
 </b>
 </p>
 <blockquote align="center">built on <span style="color: #8b0000;">☕</span> at <a href="https://ethglobal.com/events/ethonline2023">ETH Online 2023</a>.</blockquote>
