@@ -1,14 +1,14 @@
 # ☢️ Plutonium Wallet
 
 <br>
-Welcome to Plutonium Wallet, the pioneering Telegram wallet built on Account Abstraction technology. Seamlessly create wallets and execute gasless transactions, bundled transactions, onramp services, fund transfers, smart contract deployment, and multi-account management. Utilize the convenience of scanning QR codes for cryptocurrency payments, akin to popular UPI apps, to contribute to the mainstream adoption of crypto.
+Welcome to Plutonium Wallet, the pioneering Telegram wallet built using Account Abstraction. Seamlessly create wallets and execute gasless transactions, bundled transactions, onramp services, fund transfers, smart contract deployment, and multi-account management. Utilize the convenience of scanning QR codes for cryptocurrency payments, akin to popular UPI apps, to contribute to the mainstream adoption of crypto.
 </b>
 </p>
 <blockquote align="center">built on <span style="color: #8b0000;">☕</span> at <a href="https://ethglobal.com/events/ethonline2023">ETH Online 2023</a>.</blockquote>
 
 # 💡  Problem Statement
 
-Existing cryptocurrency wallets often lack user-friendly interfaces and comprehensive functionality. Users struggle with complex transactions, high gas fees, and limited features. There's a need for a seamless, feature-rich wallet that integrates with popular messaging platforms for easy access and control.
+Existing cryptocurrency wallets often suffer from complex user interfaces, limited functionalities, and high transaction fees, causing friction for both beginners and experienced users. Users need a user-friendly, feature-rich wallet that addresses these pain points, offering gasless transactions, bundled transactions, onramp capabilities, and intuitive controls through a wallet. Additionally, the lack of mainstream adoption for Web3 crypto payments and the absence of QR code payments akin to UPI in traditional finance highlight the need for a comprehensive solution. Plutonium Wallet aims to bridge these gaps, providing not only a robust cryptocurrency management experience but also facilitating easy and familiar payment methods for users.
 
 # 💪 Goals
 
@@ -26,7 +26,7 @@ Existing cryptocurrency wallets often lack user-friendly interfaces and comprehe
 - [Safe](https://safe.global/) is the account abstraction leader on Ethereum and the EVM with the most secure smart wallet infrastructure and platform
 - [Scroll](https://scroll.io/) is designed by and for Ethereum developers. A swift, reliable and scalable Layer 2 blockchain, Scroll extends Ethereum's capabilities, enabling apps to scale without any surprises. 
 
-# Features
+# 🛠️Features
 - Telegram Bot Integration:
 Access and control the wallet through a user-friendly Telegram bot interface.
 
@@ -79,7 +79,7 @@ Implement educational initiatives to foster cryptocurrency adoption among a broa
 - Enhanced Security Measures:
 Invest in continuous security protocols to safeguard user data and assets.
 
-#   Challenges we ran into
+# 🤔Challenges we ran into
 
 - Using Safe was new to us but the docs were of great help
 - It was the first time we were creating a telegram bot so it was pretty challenging.
