@@ -5,6 +5,8 @@ const { default: SafeApiKit } = require("@safe-global/api-kit");
 const { getUserDetails, addUserDetails } = require("./utils/firebase")
 const { decryptMnemonic } = require("./utils/secureBundle")
 const { createNewWallet } = require("./utils/createNewWallet")
+const { getBalance } = require("./utils/getBalance")
+const { getAllTxns } = require("./utils/getAllTxns")
 const { replyMessages } = require("./utils/replyMessages");
 
 
@@ -168,6 +170,135 @@ bot.command('view_seed_phrase', async ctx => {
         ctx.reply("This command is only available in Private Chats for security purposes.")
     }
 
+});
+
+// Get Balance
+bot.command('balance', async ctx => {
+    const replyData = await ctx.reply(`Fetching balance details...`);
+    const userD = await getUserDetails(ctx.message.from.id.toString())
+
+    try {
+        if (userD.status === 200) {
+            // Wallet exists
+            const arr = ctx.message.text.split(" ")
+            if (arr.length === 2) {
+                const balResp = await getBalance(ctx.message.from.id.toString(), arr[1]);
+
+                if (balResp.status === 200) {
+                    ctx.reply(balResp.data)
+                    ctx.deleteMessage(replyData.message_id)
+                }
+                else {
+                    ctx.reply(balResp.msg)
+                    ctx.deleteMessage(replyData.message_id)
+                }
+            }
+            else {
+                // Invalid command given (No password provided)
+                ctx.replyWithMarkdownV2(replyMessages['VIEW_BALANCE_INVALID_CMD']())
+                ctx.deleteMessage(replyData.message_id)
+            }
+        }
+        else {
+            // No wallet found
+            ctx.replyWithMarkdownV2(replyMessages['NO_WALLET_FOUND']())
+            ctx.deleteMessage(replyData.message_id)
+        }
+    }
+    catch (err) {
+        console.log(err)
+        ctx.reply(`An unknown error occurred!`);
+        ctx.deleteMessage(replyData.message_id)
+    }
+});
+
+// View All Transactions
+bot.command('txn_history', async ctx => {
+    const replyData = await ctx.reply(`Fetching all transaction details...`);
+
+    try {
+        const userD = await getUserDetails(ctx.message.from.id.toString())
+        if (userD.status === 200) {
+            // Wallet exists
+            const arr = ctx.message.text.split(" ")
+            if (arr.length === 2) {
+                const allTxnsResp = await getAllTxns(ctx.message.from.id.toString(), arr[1]);
+
+                if (allTxnsResp.status === 200) {
+
+
+                    allTxnsResp.data.results.forEach(result => {
+                        const timestamp = new Date(result.executionDate).toLocaleString(
+                            "default",
+                            { hour: "numeric", minute: "numeric", day: "numeric", month: "short", year: "numeric" }
+                        )
+
+                        let transfers = ""
+                        if (result.transfers) {
+                            result.transfers.forEach((item) => {
+                                transfers += `*${item.type.replaceAll("_", "\\_")}*\\: ${item.value * (10 ** -18)} ${item.tokenInfo.symbol}\n`
+                            })
+                        }
+
+                        const msg = `
+*Txn Type*\\: ${result.txType.replaceAll("_", "\\_")}
+
+${transfers}
+*From*\\: [${result.from.slice(0, 6) + '\\.\\.\\.' + result.from.slice(-4)}](https://goerli.etherscan.io/address/${result.from}) 
+*To*\\: [${result.to.slice(0, 6) + '\\.\\.\\.' + result.to.slice(-4)}](https://goerli.etherscan.io/address/${result.to})
+*At*\\: ${timestamp}`
+
+                        ctx.replyWithMarkdownV2(msg, { disable_web_page_preview: true, reply_markup: { inline_keyboard: [[{ text: "View Transaction on explorer", url: `https://goerli.etherscan.io/tx/${result.txHash}` }]] } })
+                    });
+
+                    ctx.deleteMessage(replyData.message_id)
+                }
+                else {
+                    ctx.reply(allTxnsResp.msg)
+                    ctx.deleteMessage(replyData.message_id)
+                }
+            }
+            else {
+                // Invalid command given (No password provided)
+                ctx.replyWithMarkdownV2(replyMessages['TXN_HISTORY_INVALID_CMD']())
+                ctx.deleteMessage(replyData.message_id)
+            }
+        }
+        else {
+            // No wallet found
+            ctx.replyWithMarkdownV2(replyMessages['NO_WALLET_FOUND']())
+            ctx.deleteMessage(replyData.message_id)
+        }
+    }
+    catch (err) {
+        console.log(err)
+        ctx.reply(`An unknown error occurred!`);
+        ctx.deleteMessage(replyData.message_id)
+    }
+});
+
+// Show QR command
+bot.command('show_qr', async ctx => {
+    const replyData = await ctx.reply(`Fetching account details...`);
+    const userD = await getUserDetails(ctx.message.from.id.toString())
+
+    try {
+        if (userD.status === 200) {
+            // Wallet exists
+            ctx.replyWithPhoto({ url: `https://quickchart.io/qr?text=${userD.data.safeAddresses[userD.data.currentIndex]}&margin=2&size=300"` }, { caption: "Scan this QR with any wallet to receive tokens in your wallet." })
+            ctx.deleteMessage(replyData.message_id)
+        }
+        else {
+            // No wallet found
+            ctx.replyWithMarkdownV2(replyMessages['NO_WALLET_FOUND']())
+            ctx.deleteMessage(replyData.message_id)
+        }
+    }
+    catch (err) {
+        console.log(err)
+        ctx.reply(`An unknown error occurred!`);
+        ctx.deleteMessage(replyData.message_id)
+    }
 });
 
 bot.launch();

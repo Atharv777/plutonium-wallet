@@ -34,5 +34,7 @@ After *5 seconds* this message will get deleted\\.
 
     VIEW_SEED_INVALID_CMD: () => { return ("Invalid command given\\!\nPlease use '*/view\\_seed\\_phrase \\<password\\>*' command to view your secret recovery phrase\\.\n*NOTE\\: DO NOT SHARE THIS SECRET PHRASE WITH ANYONE*\\.") },
 
+    VIEW_BALANCE_INVALID_CMD: () => { return ("Invalid command given\\!\nPlease use '*/balance \\<password\\>*' command to view balances of all the tokens in your account\\.") },
 
+    TXN_HISTORY_INVALID_CMD: () => { return ("Invalid command given\\!\nPlease use '*/txn\\_history \\<password\\>*' command to view transaction history of your account\\.") }
 }
