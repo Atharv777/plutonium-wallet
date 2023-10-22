@@ -199,7 +199,7 @@ bot.command('create_wallet', async ctx => {
                     const userData = {}
                     userData.addresses = [resp.data.address]
                     userData.currentIndex = 0
-                    userData.encryptedData = resp.data.encryptedMnemonic
+                    userData.encryptedData = JSON.stringify(resp.data.encryptedMnemonic)
                     userData.safeAddresses = [resp.data.safeAddress]
                     userData.userId = userId
 
